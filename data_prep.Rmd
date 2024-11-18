@@ -1,0 +1,129 @@
+---
+title: "Data Prep"
+author: "Ian Curtis"
+date: "2024-10-19"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(baseballr)
+```
+
+```{r}
+# only needed this once
+# chadwick_player_lu() %>%
+#   filter(birth_year >= 1980) %>% # oldest active player in MLB in 2024 was born in 1983
+#   select(key_mlbam, name_first, name_last) %>% 
+#   write_csv("app/player_lookup.csv")
+```
+
+```{r}
+# Loop through team files to get data file paths
+my_files <- list.files(path=("app/data"), pattern="*.csv", full.names = TRUE, recursive = TRUE)
+
+players <- read_csv("app/player_lookup.csv")
+
+# Read in files with the tidyverse
+data <- read_csv(my_files, guess_max = 500) %>%
+  mutate(result = case_when(type == "B" ~ "Ball",
+                            type == "S" ~ "Strike",
+                            type == "X" ~ "In Play"),
+         game_date = ymd(game_date),
+         month = month(game_date, label = TRUE, abbr = FALSE),
+         on_base = 3 - rowSums(is.na(select(., c(on_3b, on_2b, on_1b)))),
+         p_game_state = case_when(fld_score < bat_score ~ "Losing",
+                                  bat_score < fld_score ~ "Winning",
+                                  TRUE ~ "Tied")) %>% 
+  left_join(players, by = join_by(pitcher == key_mlbam))
+
+data$description <- str_replace_all(data$description, "_", " ") %>% str_to_title()
+data$bb_type <- str_replace_all(data$bb_type, "_", " ") %>% str_to_title()
+```
+
+```{r}
+subset <- data %>% 
+  filter(player_name == "Skubal, Tarik" | player_name == "Skenes, Paul")
+
+write_csv(subset, "app/testing.csv")
+```
+
+```{r}
+max_release_x <- max(subset$release_pos_x, na.rm = TRUE)
+min_release_x <- min(subset$release_pos_x, na.rm = TRUE)
+max_release_y <- max(subset$release_pos_z, na.rm = TRUE)
+min_release_y <- min(subset$release_pos_z, na.rm = TRUE)
+
+subset %>% ggplot(aes(x = release_pos_x, y = release_pos_z)) +
+  geom_point() + 
+  coord_cartesian(xlim = c(-5, 5), ylim = c(0, 9))
+```
+
+May need to run an if statement here. If pitcher throws left, limit x-axis to -1, 5? If pitcher throws right, limit to -5, 1?
+
+https://jacksonlab.agronomy.wisc.edu/2016/05/23/15-level-colorblind-friendly-palette/
+
+```{r}
+scale_color_manual(values = c("#000000","#004949","#009292","#ff6db6","#ffb6db",
+ "#490092","#006ddb","#b66dff","#6db6ff","#b6dbff",
+ "#920000","#924900","#db6d00","#24ff24","#ffff6d"))
+```
+
+```{r}
+avg_sz_bot <- mean(subset$sz_bot)
+avg_sz_top <- mean(subset$sz_top)
+
+subset %>% ggplot(aes(x = plate_x, y = plate_z)) +
+  geom_point() +
+  geom_segment(x = -0.708 - .131, y = avg_sz_bot, xend = 0.708 + .131, color = "red") +
+  geom_segment(x = -0.708 - .131, y = avg_sz_top, xend = 0.708 + .131, color = "red") +
+  geom_segment(x = -0.708 - .131, y = avg_sz_bot, yend = avg_sz_top, color = "red") +
+  geom_segment(x = 0.708 + .131, y = avg_sz_bot, yend = avg_sz_top, color = "red") +
+  scale_color_brewer(palette = "Dark2")
+```
+
+```{r}
+subset %>% 
+  ggplot(aes(x = pitch_name, fill = factor(inning_topbot))) +
+  geom_bar() +
+  scale_fill_brewer(palette = "Dark2")
+```
+
+```{r}
+subset %>% 
+  mutate(tooltip = paste0("Speed: ", release_speed, " mph\n",
+                          "Pitch Type: ", pitch_name, "\n",
+                          "Pitch Result: ", type, "\n",
+                          "Inning: ", paste(inning_topbot, inning))) %>% 
+  select(tooltip)
+```
+
+```{r}
+# new_files <- list("0809.csv")
+# 
+# for (i in seq(10, 31, 1)) {
+#   filename <- paste0("08", i, ".csv")
+#   new_files <- append(new_files, filename)
+# }
+```
+
+```{r}
+for (filename in my_files[133:163]) {
+  file <- read_csv(filename) %>%
+    select(c(game_date:description, zone, stand:strikes, plate_x:inning_topbot, sz_top:release_spin_rate, at_bat_number:fld_score))
+
+  write_csv(x = file, file = filename)
+
+}
+```
+
+
+
+
+
+
+
+
+
+
