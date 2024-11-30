@@ -46,7 +46,7 @@ data$bb_type <- str_replace_all(data$bb_type, "_", " ") %>% str_to_title()
 subset <- data %>% 
   filter(player_name == "Skubal, Tarik" | player_name == "Skenes, Paul")
 
-write_csv(subset, "app/testing.csv")
+# write_csv(subset, "app/testing.csv")
 ```
 
 ```{r}
@@ -99,26 +99,25 @@ subset %>%
   select(tooltip)
 ```
 
+testing pitch movement statistic
+x_change: bigger number means more movement
+z_change: bigger number means more movement
+will need absolute value
 ```{r}
-# new_files <- list("0809.csv")
-# 
-# for (i in seq(10, 31, 1)) {
-#   filename <- paste0("08", i, ".csv")
-#   new_files <- append(new_files, filename)
-# }
+subset %>% 
+  # select(release_pos_x, release_pos_z, plate_x, plate_z) %>% 
+  mutate(x_change = abs(release_pos_x - plate_x),
+         z_change = abs(release_pos_z - plate_z),
+         movement_score = x_change + z_change) %>% 
+  # ggplot(aes(x = x_change, y = z_change)) +
+  # geom_point()
+  select(pitch_name, x_change, z_change, movement_score) %>% 
+  group_by(pitch_name) %>% 
+  summarise(x = mean(x_change, na.rm = T),
+            z = mean(z_change, na.rm = T),
+            m = mean(movement_score, na.rm = T))
+  
 ```
-
-```{r}
-for (filename in my_files[133:163]) {
-  file <- read_csv(filename) %>%
-    select(c(game_date:description, zone, stand:strikes, plate_x:inning_topbot, sz_top:release_spin_rate, at_bat_number:fld_score))
-
-  write_csv(x = file, file = filename)
-
-}
-```
-
-
 
 
 
