@@ -53,7 +53,7 @@ ui <- fluidPage(theme = shinytheme("darkly"),
                 useWaiter(),
 
   # Application title
-  titlePanel("Looking at MLB Pitchers: 2024 Regular Season"),
+  titlePanel("Visualizing MLB Pitchers: 2024 Regular Season"),
   
 
   sidebarLayout(
